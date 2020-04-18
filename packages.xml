@@ -316,14 +316,14 @@
     </patches>
   </package>
   <package>
-    <name>Go 1.12</name>
+    <name>Go 1.14</name>
     <urls>
-      <url>{{ site_mirror }}/contrail-third-party/g/go1.12.7.linux-amd64.tar.gz</url>
-      <url canonical="true">https://storage.googleapis.com/golang/go1.12.7.linux-amd64.tar.gz</url>
+      <url>{{ site_mirror }}/contrail-third-party/g/go1.14.2.linux-amd64.tar.gz</url>
+      <url canonical="true">https://storage.googleapis.com/golang/go1.14.2.linux-amd64.tar.gz</url>
     </urls>
-    <local-filename>go1.12.7.linux-amd64.tar.gz</local-filename>
+    <local-filename>go1.14.2.linux-amd64.tar.gz</local-filename>
     <format>tgz</format>
-    <md5>3f0ca2acb238bef57c7e2b6e3d8d0730</md5>
+    <md5>856d248e3ea8a287d13e5f6afd086282</md5>
   </package>
   <package>
     <name>Golangci-lint</name>
