@@ -23,3 +23,7 @@ rapidjson/
 tbb40_20111130oss/
 thrift-0.8.0/
 vijava/
+cni_go_deps/
+contrail-third-party-packages/
+dpdk/
+restclient-cpp/
