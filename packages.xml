@@ -220,13 +220,13 @@
   <package>
     <name>Simple AMQP Client</name>
     <urls>
-      <url>{{ site_mirror }}/contrail-third-party/S/SimpleAmqpClient-2.4.0.tar.gz</url>
-      <url canonical="true">https://github.com/alanxz/SimpleAmqpClient/archive/v2.4.0.tar.gz</url>
+      <url>{{ site_mirror }}/contrail-third-party/S/SimpleAmqpClient-2.5.0.tar.gz</url>
+      <url canonical="true">https://github.com/alanxz/SimpleAmqpClient/archive/v2.5.0.tar.gz</url>
     </urls>
-    <local-filename>SimpleAmqpClient-2.4.0.tar.gz</local-filename>
+    <local-filename>SimpleAmqpClient-2.5.0.tar.gz</local-filename>
     <format>tgz</format>
     <rename>SimpleAmqpClient</rename>
-    <md5>fb86236ae98cd6116cbdf94d8d5f20b0</md5>
+    <md5>fcc9b3630173191f97b74755f5e4e09a</md5>
   </package>
   <package>
     <name>RabbitMQ C</name>
