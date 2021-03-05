@@ -46,11 +46,13 @@ def getFilename(pkg, url):
         filename = m.group(1)
     return filename
 
+
 def getTarDestination(tgzfile, compress_flag):
     output = subprocess.check_output(['tar', compress_flag + 'tf', tgzfile])
     first = output.splitlines()[0]
     fields = first.decode("utf-8").split('/')
     return fields[0].encode("utf-8")
+
 
 def getZipDestination(zipfile):
     unzip_cmd = ['unzip', '-t', zipfile]
@@ -63,6 +65,7 @@ def getZipDestination(zipfile):
         if m:
             return m.group(1)
     return None
+
 
 def ApplyPatches(pkg):
     stree_node = pkg.find('patches')
@@ -88,6 +91,7 @@ def ApplyPatches(pkg):
             if exit_code != 0:
                 raise PatchError('Failed to apply patch %s' % patch.text)
 
+
 def DownloadPackage(urls, pkg, md5):
     retry_count = 0
     md5sum = None
@@ -102,7 +106,7 @@ def DownloadPackage(urls, pkg, md5):
 
             try:
                 urllib.request.urlretrieve(url, pkg)
-            except:
+            except Exception:
                 print("Url did not work: " + url)
                 continue
 
@@ -138,12 +142,14 @@ def ReconfigurePackageSources(path):
     proc = subprocess.Popen(['autoreconf', '--force', '--install'],
                             cwd=path)
     ret = proc.wait()
-    if ret is not 0:
+    if ret != 0:
         sys.exit('Terminating: autoreconf returned with error code: %d', ret)
+
 
 def PlatformInfo():
     (distname, version, _) = platform.dist()
     return (distname.lower(), version)
+
 
 def VersionMatch(v_sys, v_spec):
     from distutils.version import LooseVersion
@@ -159,11 +165,13 @@ def VersionMatch(v_sys, v_spec):
     else:
         return LooseVersion(v_sys) == LooseVersion(v_spec)
 
+
 def PlatformMatch(system, spec):
     if system[0] != spec[0]:
         return False
     return VersionMatch(system[1], spec[1])
-    
+
+
 def PlatformRequires(pkg):
     platform = pkg.find('platform')
     if platform is None:
@@ -179,6 +187,7 @@ def PlatformRequires(pkg):
             return False
 
     return True
+
 
 def ProcessPackage(pkg):
     if not PlatformRequires(pkg):
@@ -251,6 +260,7 @@ def ProcessPackage(pkg):
     if autoreconf is not None and autoreconf.text.lower() == 'true':
         ReconfigurePackageSources(dest)
 
+
 def FindMd5sum(anyfile):
     hash_md5 = hashlib.md5()
     with open(anyfile, "rb") as f:
@@ -262,8 +272,8 @@ def FindMd5sum(anyfile):
 def parse_args():
     global ARGS
     parser = argparse.ArgumentParser()
-    parser.add_argument("--file", dest="filename",default=ARGS['filename'],
-                      help="read data from FILENAME")
+    parser.add_argument("--file", dest="filename", default=ARGS['filename'],
+                        help="read data from FILENAME")
     parser.add_argument("--cache-dir", default=ARGS['cache_dir'])
     parser.add_argument("--node-module-dir", default=ARGS['node_modules_dir'])
     parser.add_argument("--node-module-tmp-dir", default=ARGS['node_modules_tmp_dir'])
@@ -284,6 +294,7 @@ def main():
     for object in root:
         if object.tag == 'package':
             ProcessPackage(object)
+
 
 if __name__ == '__main__':
     parse_args()

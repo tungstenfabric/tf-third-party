@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # This script creates a local mirror for third-party packages used
 # in Contrail builds.
 #
-# Usage: populate_cache.py target_directory/
+# Usage: populate_cache.py target_directory/ packages.xml
 
 import logging
 import argparse
@@ -11,10 +11,12 @@ import os
 import hashlib
 import shutil
 import sys
-import urllib2
+from urllib.request import urlopen
+from urllib3.exceptions import SubjectAltNameWarning
+import warnings
+import ssl
+import xml.etree.ElementTree
 
-from urlparse import urlparse
-from lxml import objectify
 
 LOG = logging.getLogger("populate_cache")
 LOG.setLevel(logging.DEBUG)
@@ -24,25 +26,21 @@ ch.setLevel(logging.DEBUG)
 
 LOG.addHandler(ch)
 
-def parse_packages_xml(path):
-    return objectify.parse(path)
+warnings.filterwarnings('ignore', category=SubjectAltNameWarning)
+warnings.filterwarnings('ignore', ".*SNIMissingWarning.*")
+warnings.filterwarnings('ignore', ".*InsecurePlatformWarning.*")
+warnings.filterwarnings('ignore', ".*SubjectAltNameWarning.*")
 
-def get_package_list(xml):
-    root = xml.getroot()
-    return root.findall("package")
 
 def get_package_details(element):
-    md5sum = element['md5']
-    canonical_url = element['urls'].findall("url[@canonical='true']")
-    assert len(canonical_url) == 1
+    md5sum = element.find('md5').text
+    # can be array
+    canonical_url = element.find('urls').findall("url[@canonical='true']")
+    cache_url = next(url.text for url in element.find('urls') if "{{ site_mirror }}" in url.text)
+    filename = cache_url.replace("{{ site_mirror }}/", "")
 
-    try:
-        filename = element['local-filename'].text
-    except AttributeError:
-        parsed_url = urlparse(canonical_url[0].text)
-        filename = os.path.basename(parsed_url.path)
+    return (canonical_url, filename, md5sum)
 
-    return (canonical_url[0].text, filename, md5sum)
 
 def cached_file_exists(dest, filename, md5sum):
     parent_dir = os.path.join(dest, filename[0])
@@ -63,16 +61,18 @@ def cached_file_exists(dest, filename, md5sum):
     LOG.info("File %s found, checksum matches", filename)
     return True
 
+
 def download_package(canonical_url, dest, filename, md5sum):
-    parent_dir = os.path.join(dest, filename[0])
-    local_path = os.path.join(parent_dir, filename)
+    local_path = os.path.join(dest, filename)
+    parent_dir = os.path.dirname(local_path)
     temp_path = local_path + '.tmp'
 
     if not os.path.exists(parent_dir):
         os.makedirs(parent_dir)
 
+    context = ssl._create_unverified_context()
+    req = urlopen(canonical_url, context=context)
     chunk = 16 * 1024
-    req = urllib2.urlopen(canonical_url)
     with open(temp_path, 'wb') as fh:
         shutil.copyfileobj(req, fh, chunk)
 
@@ -80,8 +80,8 @@ def download_package(canonical_url, dest, filename, md5sum):
         calculated_md5 = hashlib.md5(fh.read()).hexdigest()
         if calculated_md5 != md5sum:
             LOG.error("File %s checksum error"
-                     "(found: '%s' expected: '%s')",
-                     filename, calculated_md5, md5sum)
+                      "(found: '%s' expected: '%s')",
+                      filename, calculated_md5, md5sum)
             return False
 
     LOG.info("File %s downloaded, checksum matches", filename)
@@ -90,21 +90,32 @@ def download_package(canonical_url, dest, filename, md5sum):
         os.unlink(local_path)
     os.rename(temp_path, local_path)
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("destination", nargs=1)
+    parser.add_argument("file", nargs=1)
     args = parser.parse_args(sys.argv[1:])
 
     dest = args.destination[0]
+    LOG.info("INFO: save artefacts to %s", dest)
 
-    xml = parse_packages_xml("packages.xml")
-    packages = get_package_list(xml)
-    for package in packages:
-        canonical_url, filename, md5sum = get_package_details(package)
+    tree = xml.etree.ElementTree.parse(args.file[0])
+    for item in tree.getroot():
+        if item.tag != 'package':
+            continue
+        canonical_url, filename, md5sum = get_package_details(item)
         if cached_file_exists(dest, filename, md5sum):
             continue
-        download_package(canonical_url, dest, filename, md5sum)
+        for url in canonical_url:
+            try:
+                if download_package(url.text, dest, filename, md5sum):
+                    break
+            except Exception as e:
+                LOG.error("Exception during download %s: %s", url.text, e)
+        else:
+            LOG.error("ERROR!!! File %s was not downloaded", filename)
+
 
 if __name__ == "__main__":
     main()
-

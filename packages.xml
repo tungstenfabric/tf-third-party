@@ -175,6 +175,7 @@
   <package>
     <name>Thread Building Blocks 4.4 2018 Update 5</name>
     <urls>
+      <url>{{ site_mirror }}/contrail-third-party/l/libtbb/2018_U5.tar.gz</url>
       <url canonical="true">https://github.com/tungstenfabric/tf-third-party-cache/raw/master/libtbb/2018_U5.tar.gz</url>
     </urls>
     <format>tgz</format>
