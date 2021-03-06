@@ -33,7 +33,12 @@ warnings.filterwarnings('ignore', ".*SubjectAltNameWarning.*")
 
 
 def get_package_details(element):
-    md5sum = element.find('md5').text
+    md5sum = element.find('md5')
+    if len(md5sum) > 0:
+        md5sum = [(item.tag, item.text) for item in md5sum]
+    else:
+        md5sum = [('', md5sum.text)]
+
     # can be array
     canonical_url = element.find('urls').findall("url[@canonical='true']")
     cache_url = next(url.text for url in element.find('urls') if "{{ site_mirror }}" in url.text)
@@ -43,8 +48,7 @@ def get_package_details(element):
 
 
 def cached_file_exists(dest, filename, md5sum):
-    parent_dir = os.path.join(dest, filename[0])
-    local_path = os.path.join(parent_dir, filename)
+    local_path = os.path.join(dest, filename)
 
     if not os.path.exists(local_path):
         LOG.info("File %s missing, will download", filename)
@@ -89,6 +93,7 @@ def download_package(canonical_url, dest, filename, md5sum):
     if os.path.exists(local_path):
         os.unlink(local_path)
     os.rename(temp_path, local_path)
+    return True
 
 
 def main():
@@ -104,17 +109,27 @@ def main():
     for item in tree.getroot():
         if item.tag != 'package':
             continue
-        canonical_url, filename, md5sum = get_package_details(item)
-        if cached_file_exists(dest, filename, md5sum):
-            continue
-        for url in canonical_url:
-            try:
-                if download_package(url.text, dest, filename, md5sum):
-                    break
-            except Exception as e:
-                LOG.error("Exception during download %s: %s", url.text, e)
-        else:
-            LOG.error("ERROR!!! File %s was not downloaded", filename)
+        canonical_url, filename_template, md5sum = get_package_details(item)
+        for md5sum_item in md5sum:
+            if md5sum_item[0] == 'other':
+                filename = filename_template.replace("/$distro", '')
+            else:
+                filename = filename_template.replace("$distro", md5sum_item[0])
+            if cached_file_exists(dest, filename, md5sum_item[1]):
+                continue
+
+            for url_item in canonical_url:
+                if md5sum_item[0] == 'other':
+                    url = url_item.text.replace("/$distro", '')
+                else:
+                    url = url_item.text.replace("$distro", md5sum_item[0])
+                try:
+                    if download_package(url, dest, filename, md5sum_item[1]):
+                        break
+                except Exception as e:
+                    LOG.error("Exception during download %s: %s", url, e)
+            else:
+                LOG.error("ERROR!!! File %s was not downloaded", filename)
 
 
 if __name__ == "__main__":
