@@ -182,6 +182,7 @@
     <md5>ff3ae09f8c23892fbc3008c39f78288f</md5>
     <patches>
       <patch strip="2">tbb-2018_U5_patch1.diff</patch>
+      <patch strip="2">tbb-2018_U5_patch2.diff</patch>
     </patches>
   </package>
   <package>
