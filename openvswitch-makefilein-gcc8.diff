@@ -1,0 +1,11 @@
+--- openvswitch-2.3.0/Makefile.in	2021-10-14 09:31:35.033881985 -0400
++++ openvswitch-2.3.0/Makefile.in	2021-10-14 09:50:52.249173520 -0400
+@@ -4698,7 +4698,7 @@
+ @HAVE_OPENSSL_TRUE@	 openssl dhparam -C -in $(srcdir)/lib/dh1024.pem -noout &&	\
+ @HAVE_OPENSSL_TRUE@	 openssl dhparam -C -in $(srcdir)/lib/dh2048.pem -noout &&	\
+ @HAVE_OPENSSL_TRUE@	 openssl dhparam -C -in $(srcdir)/lib/dh4096.pem -noout)	\
+-@HAVE_OPENSSL_TRUE@	| sed 's/\(get_dh[0-9]*\)()/\1(void)/' > lib/dhparams.c.tmp
++@HAVE_OPENSSL_TRUE@	| sed 's/static \(DH \*get_dh[0-9]*\)(.*)/\1(void)/' > lib/dhparams.c.tmp
+ @HAVE_OPENSSL_TRUE@	mv lib/dhparams.c.tmp lib/dhparams.c
+ $(srcdir)/lib/vswitch-idl.ovsidl: $(VSWITCH_IDL_FILES)
+ 	$(OVSDB_IDLC) annotate $(VSWITCH_IDL_FILES) > $@.tmp

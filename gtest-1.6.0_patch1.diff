@@ -34,7 +34,7 @@ index 157b47f..5eabc07 100644
 +namespace tr1 {
 +using ::std::get;
 +using ::std::make_tuple;
-+sing ::std::tuple;
++using ::std::tuple;
 +using ::std::tuple_element;
 +using ::std::tuple_size;
 +}

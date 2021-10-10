@@ -276,6 +276,9 @@
     </urls>
     <format>zip</format>
     <md5>4f82cc9f41b7d39afeeec10ff8b581b9</md5>
+    <patches>
+      <patch strip="2">rapidjson_patch1.diff</patch>
+    </patches>
   </package>
   <package>
     <name>ISC Bind</name>
@@ -315,6 +318,9 @@
     <md5>9c4d1471a56718132e0157af1bfc9310</md5>
     <patches>
       <patch strip="1">openvswitch.diff</patch>
+      <patch strip="0">openvswitch-ovsdb-idl-c.diff</patch>
+      <patch strip="0">openvswitch-makefilein-gcc8.diff</patch>
+      <patch strip="0">openvswitch-automakemk-gcc8.diff</patch>
     </patches>
   </package>
   <package>
