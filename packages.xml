@@ -23,7 +23,7 @@
     <format>zip</format>
     <rename>googletest-release-1.8.1</rename>
     <md5>ad6868782b5952b7476a7c1c72d5a714</md5>
-     <platform>
+    <platform>
       <exclude>
         <distribution>
           <name>ubuntu</name>
@@ -367,4 +367,21 @@
       <patch strip="1">libipfix_patch1.diff</patch>
     </patches>
   </package>
+  <package>
+    <name>compat-openssl10-debugsource-1.0.2o</name>
+    <urls>
+      <url>include/openssl</url>
+    </urls>
+    <local-filename>/usr/local/ssl/include/openssl</local-filename>
+    <format>folder</format>
+    <platform>
+      <include>
+        <distribution>
+          <name>redhat</name>
+          <version>8.4</version>
+        </distribution>
+      </include>
+    </platform>
+  </package>
+
 </packages>

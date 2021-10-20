@@ -39,7 +39,6 @@ def getFilename(pkg, url):
     element_node = pkg.find("local-filename")
     if element_node is not None:
         return element_node.text
-
     (path, filename) = url.rsplit('/', 1)
     m = re.match(r'\w+\?\w+=(.*)', filename)
     if m:
@@ -48,16 +47,22 @@ def getFilename(pkg, url):
 
 
 def getTarDestination(tgzfile, compress_flag):
-    output = subprocess.check_output(['tar', compress_flag + 'tf', tgzfile])
+    cmd = ['tar', compress_flag + 'tf', tgzfile]
+    if ARGS['dry_run']:
+        print("INFO: dry-run: unpack cmd: %s" % " ".join(cmd))
+        return
+    output = subprocess.check_output(cmd)
     first = output.splitlines()[0]
     fields = first.decode("utf-8").split('/')
     return fields[0].encode("utf-8")
 
 
 def getZipDestination(zipfile):
-    unzip_cmd = ['unzip', '-t', zipfile]
-    output = subprocess.check_output(unzip_cmd, universal_newlines=True)
-
+    cmd = ['unzip', '-t', zipfile]
+    if ARGS['dry_run']:
+        print("INFO: dry-run: unpack cmd: %s" % " ".join(cmd))
+        return
+    output = subprocess.check_output(cmd, universal_newlines=True)
     lines = output.splitlines()
     for line in lines:
         print(line)
@@ -72,7 +77,7 @@ def ApplyPatches(pkg):
     if stree_node is None:
         return
     destination_node = pkg.find('destination')
-    for patch in stree_node.getchildren():
+    for patch in stree_node:
         cmd = ['patch', '-i', patch.text]
 
         if destination_node is not None:
@@ -103,13 +108,16 @@ def DownloadPackage(urls, pkg, md5):
                 if not ARGS['site_mirror']:
                     continue
                 url = url.replace("{{ site_mirror }}", ARGS['site_mirror'])
-
             try:
-                urllib.request.urlretrieve(url, pkg)
-            except Exception:
-                print("Url did not work: " + url)
+                print("INFO: download package %s => %s" % (url, pkg))
+                if not ARGS['dry_run']:
+                    urllib.request.urlretrieve(url, pkg)
+            except Exception as e:
+                print("Url did not work: %s: %s" % (url, e))
                 continue
-
+            if ARGS['dry_run']:
+                print("INFO: dry-run: skip check of expected md5sum: %s" % md5)
+                return
             md5sum = FindMd5sum(pkg)
             if ARGS['verbose']:
                 print("Calculated md5sum: %s" % md5sum)
@@ -147,9 +155,11 @@ def ReconfigurePackageSources(path):
 
 
 def PlatformInfo():
-    (distname, version, _) = platform.dist()
-    return (distname.lower(), version)
-
+    if sys.platform != 'darwin':
+        (distname, version, _) = platform.dist()
+        return (distname.lower(), version)
+    else:
+        return "darwin", ""
 
 def VersionMatch(v_sys, v_spec):
     from distutils.version import LooseVersion
@@ -169,7 +179,19 @@ def VersionMatch(v_sys, v_spec):
 def PlatformMatch(system, spec):
     if system[0] != spec[0]:
         return False
-    return VersionMatch(system[1], spec[1])
+    return VersionMatch(system[1], spec[1]) if spec[1] else True
+
+
+def matchDistributions(s):
+    if s:
+        info = PlatformInfo()
+        for distro in s.findall('distribution'):
+            name = distro.find('name').text
+            v = distro.find('version')
+            version = v.text if v else None
+            if PlatformMatch(info, (name, version)):
+                return True
+    return False
 
 
 def PlatformRequires(pkg):
@@ -177,32 +199,56 @@ def PlatformRequires(pkg):
     if platform is None:
         return True
 
-    info = PlatformInfo()
-
     exclude = platform.find('exclude')
-    for distro in exclude.findall('distribution'):
-        name = distro.find('name').text
-        version = distro.find('version').text
-        if PlatformMatch(info, (name, version)):
-            return False
+    if matchDistributions(exclude):
+        print(
+            "INFO: skip %s by excludes for %s" % \
+            (pkg.find('name').text), PlatformInfo())
+        return False
 
+    include = platform.find('include')
+    if include and len(include) > 0:
+        # if include set than apply only if it is included
+        # explicetely
+        if not matchDistributions(include):
+            print(
+                "INFO: skip %s as not explicetly included for %s" % \
+                (pkg.find('name').text, PlatformInfo()))
+            return False
     return True
+
+
+def _copy_tree(src, dst):
+    if not os.path.exists(dst):
+        shutil.copytree(src, dst)
+        return
+    for i in os.listdir(src):
+        s = os.path.join(src, i)
+        d = os.path.join(dst, i)
+        if os.path.isdir(s):
+            _copy_tree(s, d)
+        else:
+            shutil.copy2(s, d)
 
 
 def ProcessPackage(pkg):
     if not PlatformRequires(pkg):
         return
 
-    print("Processing %s ..." % (pkg.find('name').text))
-    urls = list(pkg.find('urls'))
-    filename = getFilename(pkg, urls[0].text)
-    ccfile = ARGS['cache_dir'] + '/' + filename
-    DownloadPackage(urls, ccfile, pkg.find('md5').text)
-
     pkg_format = None
     pkg_format_node = pkg.find('format')
     if pkg_format_node is not None:
         pkg_format = pkg_format_node.text
+
+    name = pkg.find('name').text
+    print("Processing %s ..." % (name))
+    urls = list(pkg.find('urls'))
+    ccfile = getFilename(pkg, urls[0].text)
+    if ccfile[0] != '/':
+        ccfile = ARGS['cache_dir'] + '/' + ccfile
+
+    if pkg_format != 'folder':
+        DownloadPackage(urls, ccfile, pkg.find('md5').text)
 
     #
     # Determine the name of the directory created by the package.
@@ -225,6 +271,8 @@ def ProcessPackage(pkg):
             dest = getTarDestination(ccfile, 'j')
         elif pkg_format == 'zip':
             dest = getZipDestination(ccfile)
+        elif pkg_format == 'folder':
+            dest = ccfile
 
     rename = None
     rename_node = pkg.find('rename')
@@ -239,19 +287,36 @@ def ProcessPackage(pkg):
     elif pkg_format == 'zip':
         shutil_format = 'zip'
 
-    if not ARGS['dry_run']:
+    if pkg_format != 'folder':
         if rename and os.path.isdir(rename):
-            # clean directory before unpacking and applying patches
-            shutil.rmtree(rename)
+            if ARGS['verbose']:
+                print("INFO: clean directory %s" % rename)
+            if not ARGS['dry_run']:
+                # clean directory before unpacking and applying patches
+                shutil.rmtree(rename)
         elif dest and os.path.isdir(dest):
             if ARGS['verbose']:
-                print("Clean directory %s" % dest)
-            shutil.rmtree(dest)
-
-        shutil.unpack_archive(ccfile, unpackdir, shutil_format)
+                print("INFO: clean directory %s" % dest)
+            if not ARGS['dry_run']:
+                shutil.rmtree(dest)
+        if ARGS['verbose']:
+            print("INFO: unpack archive %s to %s (format %s)" % (ccfile, dest, shutil_format))
+        if not ARGS['dry_run']:
+            shutil.unpack_archive(ccfile, unpackdir, shutil_format)
+    else:
+        for u in urls:
+            _u = u.text
+            src = _u if _u[0] == '/' else name + "/" + _u
+            if ARGS['verbose']:
+                print("INFO: Copy tree %s => %s" % (src, dest))
+            if not ARGS['dry_run']:
+                _copy_tree(src, dest)
 
     if rename and dest:
-        os.rename(dest, rename)
+        if ARGS['verbose']:
+            print("INFO: rename %s => %s" % (dest, rename))
+        if not ARGS['dry_run']:
+            os.rename(dest, rename)
         dest = rename
 
     ApplyPatches(pkg)
@@ -309,12 +374,15 @@ if __name__ == '__main__':
 
     for exc in dependencies:
         if not find_executable(exc):
-            print('Please install %s' % exc)
-            sys.exit(1)
+            print('ERROR: Please install %s' % exc)
+            if not ARGS['dry_run']:
+                sys.exit(1)
 
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     try:
-        os.makedirs(ARGS['cache_dir'])
+        print("INFO: create cache dir %s" % ARGS['cache_dir'])
+        if not ARGS['dry_run']:
+            os.makedirs(ARGS['cache_dir'])
     except OSError:
         pass
 
