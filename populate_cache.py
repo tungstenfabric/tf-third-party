@@ -110,8 +110,8 @@ def main():
         if item.tag != 'package':
             continue
         f = item.find('format')
-        LOG.info("INFO: format is %s", f.text)
-        if f and f.text == 'folder':
+        LOG.info("INFO: format is %s", f)
+        if ('folder' == f) or ('folder' == f.text):
             continue
         canonical_url, filename_template, md5sum = get_package_details(item)
         for md5sum_item in md5sum:
