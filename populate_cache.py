@@ -110,6 +110,7 @@ def main():
         if item.tag != 'package':
             continue
         f = item.find('format')
+        LOG.info("INFO: format is %s", f)
         if f and f.text == 'folder':
             continue
         canonical_url, filename_template, md5sum = get_package_details(item)
