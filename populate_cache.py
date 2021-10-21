@@ -109,6 +109,9 @@ def main():
     for item in tree.getroot():
         if item.tag != 'package':
             continue
+        f = item.find('format')
+        if f and f.text == 'folder':
+            continue
         canonical_url, filename_template, md5sum = get_package_details(item)
         for md5sum_item in md5sum:
             if md5sum_item[0] == 'other':
