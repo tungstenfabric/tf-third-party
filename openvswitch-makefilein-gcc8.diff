@@ -1,6 +1,10 @@
---- openvswitch-2.3.0/Makefile.in	2021-10-14 09:31:35.033881985 -0400
-+++ openvswitch-2.3.0/Makefile.in	2021-10-14 09:50:52.249173520 -0400
-@@ -4698,7 +4698,7 @@
+--- openvswitch-2.3.0/Makefile.in	2014-08-14 16:35:16.000000000 -0400
++++ openvswitch-2.3.0/Makefile.in	2021-10-23 08:01:02.456131763 -0400
+@@ -4695,10 +4695,11 @@
+ @LINUX_ENABLED_TRUE@	cd datapath/linux && $(MAKE) modules_install
+ @HAVE_OPENSSL_TRUE@lib/dhparams.c: lib/dh1024.pem lib/dh2048.pem lib/dh4096.pem
+ @HAVE_OPENSSL_TRUE@	(echo '#include "lib/dhparams.h"' &&				\
++@HAVE_OPENSSL_TRUE@	 cat $(srcdir)/lib/dh_set0_pqg.c  &&	\
  @HAVE_OPENSSL_TRUE@	 openssl dhparam -C -in $(srcdir)/lib/dh1024.pem -noout &&	\
  @HAVE_OPENSSL_TRUE@	 openssl dhparam -C -in $(srcdir)/lib/dh2048.pem -noout &&	\
  @HAVE_OPENSSL_TRUE@	 openssl dhparam -C -in $(srcdir)/lib/dh4096.pem -noout)	\

@@ -321,6 +321,7 @@
       <patch strip="0">openvswitch-ovsdb-idl-c.diff</patch>
       <patch strip="0">openvswitch-makefilein-gcc8.diff</patch>
       <patch strip="0">openvswitch-automakemk-gcc8.diff</patch>
+      <patch strip="0">openvswitch-dh-set0-pqg-gcc8.diff</patch>
     </patches>
   </package>
   <package>
