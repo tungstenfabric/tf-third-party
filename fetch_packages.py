@@ -188,7 +188,7 @@ def matchDistributions(s):
         for distro in s.findall('distribution'):
             name = distro.find('name').text
             v = distro.find('version')
-            version = v.text if v else None
+            version = v.text if v is not None else None
             if PlatformMatch(info, (name, version)):
                 return True
     return False
